@@ -7,6 +7,7 @@ import {
     StarIcon,
     ChevronDownIcon,
     ChevronUpIcon,
+    LightBulbIcon,
 } from "@heroicons/react/24/solid";
 import commandsData from "../data/git-commands.json";
 import CommandCard from "../components/CommandCard";
@@ -31,23 +32,69 @@ export default function HomePage() {
     const [query, setQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState(categories[0]);
     const [favorites, setFavorites] = useState([]);
-    const [limit, setLimit] = useState(INITIAL_LIMIT); // <-- состояние для лимита
+    const [limit, setLimit] = useState(INITIAL_LIMIT);
+    const [commandOfTheDay, setCommandOfTheDay] = useState(null); // <-- Состояние для команды дня
 
+    // --- ЛОГИКА ЗАГРУЗКИ ДАННЫХ ПРИ СТАРТЕ ---
     useEffect(() => {
+        // Загружаем избранное
         const storedFavorites = localStorage.getItem("git_favorites");
         if (storedFavorites) {
             setFavorites(JSON.parse(storedFavorites));
         }
-    }, []);
 
-    // Сбрасываем лимит при смене фильтров
-    useEffect(() => {
-        setLimit(INITIAL_LIMIT);
-    }, [query, activeCategory]);
+        // --- ЛОГИКА КОМАНДЫ ДНЯ ---
+        const today = new Date().toDateString(); // Получаем текущую дату в формате "Mon Apr 29 2024"
+        const storedDate = localStorage.getItem("cotd_date");
+        const storedCommandId = localStorage.getItem("cotd_id");
+
+        if (storedDate === today && storedCommandId) {
+            // Если дата совпадает, берем команду из хранилища
+            const savedCommand = commandsData.find(
+                (c) => c.id === parseInt(storedCommandId)
+            );
+            setCommandOfTheDay(savedCommand);
+        } else {
+            // Если дата не совпадает или ничего нет, выбираем новую команду
+            const randomIndex = Math.floor(Math.random() * commandsData.length);
+            const newCommand = commandsData[randomIndex];
+            setCommandOfTheDay(newCommand);
+            localStorage.setItem("cotd_id", newCommand.id.toString());
+            localStorage.setItem("cotd_date", today);
+        }
+
+        // --- ЛОГИКА "ПОДЕЛИТЬСЯ" (ЧТЕНИЕ URL) ---
+        const params = new URLSearchParams(window.location.search);
+        const initialQuery = params.get("q");
+        if (initialQuery) {
+            const decodedQuery = decodeURIComponent(initialQuery);
+            setQuery(decodedQuery);
+
+            // Плавный скролл к элементу
+            const targetItem = commandsData.find(
+                (c) => c.command === decodedQuery
+            );
+            if (targetItem) {
+                setTimeout(() => {
+                    const element = document.getElementById(
+                        `command-${targetItem.id}`
+                    );
+                    element?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                    });
+                }, 300); // Небольшая задержка для рендера
+            }
+        }
+    }, []); // Этот useEffect выполняется только один раз при загрузке
 
     useEffect(() => {
         localStorage.setItem("git_favorites", JSON.stringify(favorites));
     }, [favorites]);
+
+    useEffect(() => {
+        setLimit(INITIAL_LIMIT);
+    }, [query, activeCategory]);
 
     const handleToggleFavorite = (commandId) => {
         setFavorites((prev) =>
@@ -100,6 +147,25 @@ export default function HomePage() {
                         Найди нужную команду, не покидая терминал.
                     </p>
                 </header>
+
+                {/* --- БЛОК: КОМАНДА ДНЯ --- */}
+                {commandOfTheDay && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-12"
+                    >
+                        <h2 className="text-center text-lg font-medium text-slate-400 dark:text-slate-500 mb-4 flex items-center justify-center gap-2">
+                            <LightBulbIcon className="h-5 w-5 text-yellow-400" />
+                            Команда дня
+                        </h2>
+                        <CommandCard
+                            item={commandOfTheDay}
+                            isFavorite={favorites.includes(commandOfTheDay.id)}
+                            onToggleFavorite={handleToggleFavorite}
+                        />
+                    </motion.div>
+                )}
 
                 <RadioGroup
                     value={activeCategory}
@@ -162,6 +228,7 @@ export default function HomePage() {
                                 index // <-- Рендерим commandsToShow вместо filteredCommands
                             ) => (
                                 <motion.div
+                                    id={`command-${item.id}`}
                                     key={item.id}
                                     layout
                                     initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -215,7 +282,10 @@ export default function HomePage() {
                                     onClick={() =>
                                         setLimit((prev) => prev + INITIAL_LIMIT)
                                     }
-                                    className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                    className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors
+                                    bg-slate-100 text-slate-600 hover:bg-slate-200 
+                                    dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 
+                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                                 >
                                     <ChevronDownIcon className="h-4 w-4" />
                                     Показать еще{" "}
@@ -228,7 +298,10 @@ export default function HomePage() {
                             {limit > INITIAL_LIMIT && (
                                 <button
                                     onClick={() => setLimit(INITIAL_LIMIT)}
-                                    className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                    className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors
+                                    bg-slate-100 text-slate-600 hover:bg-slate-200 
+                                    dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 
+                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                                 >
                                     <ChevronUpIcon className="h-4 w-4" />
                                     Свернуть
