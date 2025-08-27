@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Combobox, RadioGroup } from "@headlessui/react";
-import { MagnifyingGlassIcon, StarIcon } from "@heroicons/react/24/solid";
+import {
+    MagnifyingGlassIcon,
+    StarIcon,
+    ChevronDownIcon,
+    ChevronUpIcon,
+} from "@heroicons/react/24/solid";
 import commandsData from "../data/git-commands.json";
 import CommandCard from "../components/CommandCard";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
@@ -20,10 +25,13 @@ const categories = [
     "Продвинутые",
 ];
 
+const INITIAL_LIMIT = 10; // <-- Устанавливаем лимит
+
 export default function HomePage() {
     const [query, setQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState(categories[0]);
     const [favorites, setFavorites] = useState([]);
+    const [limit, setLimit] = useState(INITIAL_LIMIT); // <-- состояние для лимита
 
     useEffect(() => {
         const storedFavorites = localStorage.getItem("git_favorites");
@@ -31,6 +39,11 @@ export default function HomePage() {
             setFavorites(JSON.parse(storedFavorites));
         }
     }, []);
+
+    // Сбрасываем лимит при смене фильтров
+    useEffect(() => {
+        setLimit(INITIAL_LIMIT);
+    }, [query, activeCategory]);
 
     useEffect(() => {
         localStorage.setItem("git_favorites", JSON.stringify(favorites));
@@ -66,6 +79,10 @@ export default function HomePage() {
         }
         return items;
     }, [query, activeCategory, favorites]);
+
+    // Переменная для отображаемого списка с учетом лимита
+    const commandsToShow = filteredCommands.slice(0, limit);
+    const hasMore = filteredCommands.length > limit;
 
     return (
         <main className="min-h-screen text-slate-800 dark:text-slate-200">
@@ -112,7 +129,7 @@ export default function HomePage() {
                                     focus:outline-none`
                                 }
                             >
-                                {category === "Favorites" ? (
+                                {category === "Избранное" ? (
                                     <StarIcon className="h-4 w-4 inline -mt-0.5" />
                                 ) : (
                                     category
@@ -139,8 +156,11 @@ export default function HomePage() {
 
                 <section className="space-y-4 mt-8">
                     <AnimatePresence>
-                        {filteredCommands.length > 0 ? (
-                            filteredCommands.map((item, index) => (
+                        {commandsToShow.map(
+                            (
+                                item,
+                                index // <-- Рендерим commandsToShow вместо filteredCommands
+                            ) => (
                                 <motion.div
                                     key={item.id}
                                     layout
@@ -152,7 +172,7 @@ export default function HomePage() {
                                         delay: index * 0.02,
                                     }}
                                 >
-                                    {/* Теперь мы передаем весь объект 'item' целиком,
+                                    {/* Передаем весь объект 'item' целиком,
                                         а также isFavorite и onToggleFavorite */}
                                     <CommandCard
                                         item={item}
@@ -160,24 +180,63 @@ export default function HomePage() {
                                         onToggleFavorite={handleToggleFavorite}
                                     />
                                 </motion.div>
-                            ))
-                        ) : (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="text-center py-10"
-                            >
-                                <p className="text-slate-500 dark:text-slate-400">
-                                    Команды не найдены.
-                                </p>
-                                <p className="text-slate-400 dark:text-slate-600 text-sm">
-                                    Попробуйте другой запрос или проверьте
-                                    опечатки.
-                                </p>
-                            </motion.div>
+                            )
                         )}
                     </AnimatePresence>
+
+                    {/* Если не нашли команд, показываем сообщение */}
+                    {filteredCommands.length === 0 && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-center py-10"
+                        >
+                            <p className="text-slate-500 dark:text-slate-400">
+                                Команды не найдены.
+                            </p>
+                            <p className="text-slate-400 dark:text-slate-600 text-sm">
+                                Попробуйте другой запрос или проверьте опечатки.
+                            </p>
+                        </motion.div>
+                    )}
                 </section>
+
+                {/* --- КНОПКИ "ПОКАЗАТЬ ЕЩЕ" / "СКРЫТЬ" --- */}
+                <AnimatePresence>
+                    {(hasMore || limit > INITIAL_LIMIT) && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="mt-8 flex justify-center gap-4"
+                        >
+                            {hasMore && (
+                                <button
+                                    onClick={() =>
+                                        setLimit((prev) => prev + INITIAL_LIMIT)
+                                    }
+                                    className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                >
+                                    <ChevronDownIcon className="h-4 w-4" />
+                                    Показать еще{" "}
+                                    {Math.min(
+                                        INITIAL_LIMIT,
+                                        filteredCommands.length - limit
+                                    )}
+                                </button>
+                            )}
+                            {limit > INITIAL_LIMIT && (
+                                <button
+                                    onClick={() => setLimit(INITIAL_LIMIT)}
+                                    className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                >
+                                    <ChevronUpIcon className="h-4 w-4" />
+                                    Свернуть
+                                </button>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </main>
     );
