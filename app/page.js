@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Combobox, RadioGroup } from "@headlessui/react";
 import {
     MagnifyingGlassIcon,
@@ -8,6 +8,8 @@ import {
     ChevronDownIcon,
     ChevronUpIcon,
     LightBulbIcon,
+    EyeIcon,
+    EyeSlashIcon,
 } from "@heroicons/react/24/solid";
 import commandsData from "../data/git-commands.json";
 import CommandCard from "../components/CommandCard";
@@ -32,8 +34,10 @@ export default function HomePage() {
     const [query, setQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState(categories[0]);
     const [favorites, setFavorites] = useState([]);
+    const isInitialMountFavorites = useRef(true); // <-- Добавляем ref для отслеживания первого рендера
     const [limit, setLimit] = useState(INITIAL_LIMIT);
     const [commandOfTheDay, setCommandOfTheDay] = useState(null); // <-- Состояние для команды дня
+    const [isCotdVisible, setIsCotdVisible] = useState(true);
 
     // --- ЛОГИКА ЗАГРУЗКИ ДАННЫХ ПРИ СТАРТЕ ---
     useEffect(() => {
@@ -42,6 +46,10 @@ export default function HomePage() {
         if (storedFavorites) {
             setFavorites(JSON.parse(storedFavorites));
         }
+
+        // --- Загружаем предпочтение видимости "Команды дня" ---
+        const isCotdHidden = localStorage.getItem("cotd_hidden") === "true";
+        setIsCotdVisible(!isCotdHidden);
 
         // --- ЛОГИКА КОМАНДЫ ДНЯ ---
         const today = new Date().toDateString(); // Получаем текущую дату в формате "Mon Apr 29 2024"
@@ -89,12 +97,25 @@ export default function HomePage() {
     }, []); // Этот useEffect выполняется только один раз при загрузке
 
     useEffect(() => {
-        localStorage.setItem("git_favorites", JSON.stringify(favorites));
-    }, [favorites]);
+        if (isInitialMountFavorites.current) {
+            // Если это первый рендер, пропускаем сохранение
+            isInitialMountFavorites.current = false;
+        } else {
+            // Начиная со второго рендера (т.е. после действий пользователя), сохраняем
+            localStorage.setItem("git_favorites", JSON.stringify(favorites));
+        }
+    }, [favorites]); // Массив зависимостей остается тем же
 
     useEffect(() => {
         setLimit(INITIAL_LIMIT);
     }, [query, activeCategory]);
+
+    // --- Переключатель видимости "Команды дня" ---
+    const handleToggleCotdVisibility = () => {
+        const newVisibility = !isCotdVisible;
+        setIsCotdVisible(newVisibility);
+        localStorage.setItem("cotd_hidden", !newVisibility ? "true" : "false");
+    };
 
     const handleToggleFavorite = (commandId) => {
         setFavorites((prev) =>
@@ -149,23 +170,62 @@ export default function HomePage() {
                 </header>
 
                 {/* --- БЛОК: КОМАНДА ДНЯ --- */}
-                {commandOfTheDay && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mb-12"
-                    >
-                        <h2 className="text-center text-lg font-medium text-slate-400 dark:text-slate-500 mb-4 flex items-center justify-center gap-2">
-                            <LightBulbIcon className="h-5 w-5 text-yellow-400" />
-                            Команда дня
-                        </h2>
-                        <CommandCard
-                            item={commandOfTheDay}
-                            isFavorite={favorites.includes(commandOfTheDay.id)}
-                            onToggleFavorite={handleToggleFavorite}
-                        />
-                    </motion.div>
-                )}
+                <AnimatePresence>
+                    {commandOfTheDay && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="mb-12"
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-lg font-medium text-slate-400 dark:text-slate-500 flex items-center gap-2">
+                                    <LightBulbIcon className="h-5 w-5 text-yellow-400" />
+                                    Команда дня
+                                </h2>
+                                <button
+                                    onClick={handleToggleCotdVisibility}
+                                    className="p-1 rounded-full 
+                                    text-slate-400 hover:text-slate-700 hover:bg-slate-200 
+                                    dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/10 
+                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                >
+                                    {isCotdVisible ? (
+                                        <EyeSlashIcon className="h-5 w-5" />
+                                    ) : (
+                                        <EyeIcon className="h-5 w-5" />
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* --- Контент "Команды дня" теперь тоже анимируется --- */}
+                            <AnimatePresence>
+                                {isCotdVisible && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{
+                                            duration: 0.3,
+                                            ease: "easeInOut",
+                                        }}
+                                        style={{ overflow: "hidden" }}
+                                    >
+                                        <CommandCard
+                                            item={commandOfTheDay}
+                                            isFavorite={favorites.includes(
+                                                commandOfTheDay.id
+                                            )}
+                                            onToggleFavorite={
+                                                handleToggleFavorite
+                                            }
+                                        />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <RadioGroup
                     value={activeCategory}
@@ -212,9 +272,9 @@ export default function HomePage() {
                             as="input"
                             onChange={(event) => setQuery(event.target.value)}
                             className="w-full rounded-lg border py-3 pl-11 pr-4 focus:ring-2 focus:outline-none 
-                                       bg-slate-100 border-slate-300 text-black placeholder-slate-500 focus:ring-sky-500 focus:border-sky-500
-                                       dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-slate-400 dark:focus:ring-sky-500 dark:focus:border-sky-500
-                                       backdrop-blur-md"
+                                        bg-slate-100 border-slate-300 text-black placeholder-slate-500 focus:ring-sky-500 focus:border-sky-500
+                                        dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-slate-400 dark:focus:ring-sky-500 dark:focus:border-sky-500
+                                        backdrop-blur-md"
                             placeholder="Что вы хотите сделать?"
                         />
                     </div>
