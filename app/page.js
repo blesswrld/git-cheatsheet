@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { Combobox, RadioGroup } from "@headlessui/react";
+import CommandCard from "../components/CommandCard/index";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
+import { motion, AnimatePresence } from "framer-motion";
+import { useGitCommands } from "../components/HomePage/useGitCommands";
+import { RadioGroup, Combobox } from "@headlessui/react";
 import {
     MagnifyingGlassIcon,
     StarIcon,
@@ -11,146 +14,26 @@ import {
     EyeIcon,
     EyeSlashIcon,
 } from "@heroicons/react/24/solid";
-import commandsData from "../data/git-commands.json";
-import CommandCard from "../components/CommandCard";
-import { ThemeSwitcher } from "../components/ThemeSwitcher";
-import { motion, AnimatePresence } from "framer-motion";
-
-const categories = [
-    "Все",
-    "Избранное",
-    "Настройка",
-    "Основы",
-    "Ветки",
-    "История и сравнение",
-    "Отмена изменений",
-    "Удаленные",
-    "Продвинутые",
-];
-
-const INITIAL_LIMIT = 10; // <-- Устанавливаем лимит
 
 export default function HomePage() {
-    const [query, setQuery] = useState("");
-    const [activeCategory, setActiveCategory] = useState(categories[0]);
-    const [favorites, setFavorites] = useState([]);
-    const isInitialMountFavorites = useRef(true); // <-- Добавляем ref для отслеживания первого рендера
-    const [limit, setLimit] = useState(INITIAL_LIMIT);
-    const [commandOfTheDay, setCommandOfTheDay] = useState(null); // <-- Состояние для команды дня
-    const [isCotdVisible, setIsCotdVisible] = useState(true);
-
-    // --- ЛОГИКА ЗАГРУЗКИ ДАННЫХ ПРИ СТАРТЕ ---
-    useEffect(() => {
-        // Загружаем избранное
-        const storedFavorites = localStorage.getItem("git_favorites");
-        if (storedFavorites) {
-            setFavorites(JSON.parse(storedFavorites));
-        }
-
-        // --- Загружаем предпочтение видимости "Команды дня" ---
-        const isCotdHidden = localStorage.getItem("cotd_hidden") === "true";
-        setIsCotdVisible(!isCotdHidden);
-
-        // --- ЛОГИКА КОМАНДЫ ДНЯ ---
-        const today = new Date().toDateString(); // Получаем текущую дату в формате "Mon Apr 29 2024"
-        const storedDate = localStorage.getItem("cotd_date");
-        const storedCommandId = localStorage.getItem("cotd_id");
-
-        if (storedDate === today && storedCommandId) {
-            // Если дата совпадает, берем команду из хранилища
-            const savedCommand = commandsData.find(
-                (c) => c.id === parseInt(storedCommandId)
-            );
-            setCommandOfTheDay(savedCommand);
-        } else {
-            // Если дата не совпадает или ничего нет, выбираем новую команду
-            const randomIndex = Math.floor(Math.random() * commandsData.length);
-            const newCommand = commandsData[randomIndex];
-            setCommandOfTheDay(newCommand);
-            localStorage.setItem("cotd_id", newCommand.id.toString());
-            localStorage.setItem("cotd_date", today);
-        }
-
-        // --- ЛОГИКА "ПОДЕЛИТЬСЯ" (ЧТЕНИЕ URL) ---
-        const params = new URLSearchParams(window.location.search);
-        const initialQuery = params.get("q");
-        if (initialQuery) {
-            const decodedQuery = decodeURIComponent(initialQuery);
-            setQuery(decodedQuery);
-
-            // Плавный скролл к элементу
-            const targetItem = commandsData.find(
-                (c) => c.command === decodedQuery
-            );
-            if (targetItem) {
-                setTimeout(() => {
-                    const element = document.getElementById(
-                        `command-${targetItem.id}`
-                    );
-                    element?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                    });
-                }, 300); // Небольшая задержка для рендера
-            }
-        }
-    }, []); // Этот useEffect выполняется только один раз при загрузке
-
-    useEffect(() => {
-        if (isInitialMountFavorites.current) {
-            // Если это первый рендер, пропускаем сохранение
-            isInitialMountFavorites.current = false;
-        } else {
-            // Начиная со второго рендера (т.е. после действий пользователя), сохраняем
-            localStorage.setItem("git_favorites", JSON.stringify(favorites));
-        }
-    }, [favorites]); // Массив зависимостей остается тем же
-
-    useEffect(() => {
-        setLimit(INITIAL_LIMIT);
-    }, [query, activeCategory]);
-
-    // --- Переключатель видимости "Команды дня" ---
-    const handleToggleCotdVisibility = () => {
-        const newVisibility = !isCotdVisible;
-        setIsCotdVisible(newVisibility);
-        localStorage.setItem("cotd_hidden", !newVisibility ? "true" : "false");
-    };
-
-    const handleToggleFavorite = (commandId) => {
-        setFavorites((prev) =>
-            prev.includes(commandId)
-                ? prev.filter((id) => id !== commandId)
-                : [...prev, commandId]
-        );
-    };
-
-    const filteredCommands = useMemo(() => {
-        let items = commandsData;
-
-        // Фильтруем по категории
-        if (activeCategory === "Избранное") {
-            // <-- Проверяем 'Избранное'
-            items = items.filter((item) => favorites.includes(item.id));
-        } else if (activeCategory !== "Все") {
-            // <-- Проверяем не 'Все'
-            items = items.filter((item) => item.category === activeCategory);
-        }
-
-        const searchQuery = (query || "").toLowerCase();
-        if (searchQuery) {
-            items = items.filter((item) =>
-                `${item.description} ${item.command} ${item.keywords.join(" ")}`
-                    .toLowerCase()
-                    .includes(searchQuery)
-            );
-        }
-        return items;
-    }, [query, activeCategory, favorites]);
-
-    // Переменная для отображаемого списка с учетом лимита
-    const commandsToShow = filteredCommands.slice(0, limit);
-    const hasMore = filteredCommands.length > limit;
+    const {
+        query,
+        setQuery,
+        activeCategory,
+        setActiveCategory,
+        favorites,
+        handleToggleFavorite,
+        limit,
+        setLimit,
+        commandOfTheDay,
+        isCotdVisible,
+        handleToggleCotdVisibility,
+        filteredCommands,
+        commandsToShow,
+        hasMore,
+        categories,
+        INITIAL_LIMIT,
+    } = useGitCommands();
 
     return (
         <main className="min-h-screen text-slate-800 dark:text-slate-200">
@@ -185,10 +68,7 @@ export default function HomePage() {
                                 </h2>
                                 <button
                                     onClick={handleToggleCotdVisibility}
-                                    className="p-1 rounded-full 
-                                    text-slate-400 hover:text-slate-700 hover:bg-slate-200 
-                                    dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/10 
-                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                    className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                                 >
                                     {isCotdVisible ? (
                                         <EyeSlashIcon className="h-5 w-5" />
@@ -197,8 +77,6 @@ export default function HomePage() {
                                     )}
                                 </button>
                             </div>
-
-                            {/* --- Контент "Команды дня" теперь тоже анимируется --- */}
                             <AnimatePresence>
                                 {isCotdVisible && (
                                     <motion.div
@@ -241,18 +119,15 @@ export default function HomePage() {
                                 key={category}
                                 value={category}
                                 className={({ active, checked }) =>
-                                    `cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors
-                                    ${
+                                    `cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                                         checked
                                             ? "bg-sky-500 text-white shadow"
                                             : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-                                    }
-                                    ${
+                                    } ${
                                         active
                                             ? "ring-2 ring-offset-2 ring-offset-black ring-white"
                                             : ""
-                                    }
-                                    focus:outline-none`
+                                    } focus:outline-none`
                                 }
                             >
                                 {category === "Избранное" ? (
@@ -271,10 +146,7 @@ export default function HomePage() {
                         <Combobox.Input
                             as="input"
                             onChange={(event) => setQuery(event.target.value)}
-                            className="w-full rounded-lg border py-3 pl-11 pr-4 focus:ring-2 focus:outline-none 
-                                        bg-slate-100 border-slate-300 text-black placeholder-slate-500 focus:ring-sky-500 focus:border-sky-500
-                                        dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-slate-400 dark:focus:ring-sky-500 dark:focus:border-sky-500
-                                        backdrop-blur-md"
+                            className="w-full rounded-lg border py-3 pl-11 pr-4 focus:ring-2 focus:outline-none bg-slate-100 border-slate-300 text-black placeholder-slate-500 focus:ring-sky-500 focus:border-sky-500 dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-slate-400 dark:focus:ring-sky-500 dark:focus:border-sky-500 backdrop-blur-md"
                             placeholder="Что вы хотите сделать?"
                         />
                     </div>
@@ -299,8 +171,7 @@ export default function HomePage() {
                                         delay: index * 0.02,
                                     }}
                                 >
-                                    {/* Передаем весь объект 'item' целиком,
-                                        а также isFavorite и onToggleFavorite */}
+                                    {/* Передаем весь объект 'item' целиком, а также isFavorite и onToggleFavorite */}
                                     <CommandCard
                                         item={item}
                                         isFavorite={favorites.includes(item.id)}
@@ -342,10 +213,7 @@ export default function HomePage() {
                                     onClick={() =>
                                         setLimit((prev) => prev + INITIAL_LIMIT)
                                     }
-                                    className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors
-                                    bg-slate-100 text-slate-600 hover:bg-slate-200 
-                                    dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 
-                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                    className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                                 >
                                     <ChevronDownIcon className="h-4 w-4" />
                                     Показать еще{" "}
@@ -358,10 +226,7 @@ export default function HomePage() {
                             {limit > INITIAL_LIMIT && (
                                 <button
                                     onClick={() => setLimit(INITIAL_LIMIT)}
-                                    className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors
-                                    bg-slate-100 text-slate-600 hover:bg-slate-200 
-                                    dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 
-                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                                    className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                                 >
                                     <ChevronUpIcon className="h-4 w-4" />
                                     Свернуть
