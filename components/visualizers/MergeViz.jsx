@@ -15,7 +15,6 @@ export const MergeViz = () => (
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#60a5fa" />
             </marker>
         </defs>
-        {/* Main branch */}
         <motion.path
             d="M 10 20 H 190"
             stroke="#94a3b8"
@@ -44,7 +43,6 @@ export const MergeViz = () => (
             transition={{ delay: 0.4 }}
         />
 
-        {/* Feature branch */}
         <motion.path
             d="M 70 20 C 100 20, 110 60, 140 60 H 10"
             stroke="#34d399"
@@ -64,7 +62,6 @@ export const MergeViz = () => (
             transition={{ delay: 1 }}
         />
 
-        {/* Merge commit */}
         <motion.path
             d="M 140 60 C 150 60, 160 20, 160 20"
             stroke="#34d399"

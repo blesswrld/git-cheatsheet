@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { ClipboardIcon } from "@heroicons/react/24/outline";
 
-// Компонент для интерактивного конструктора
 export const InteractiveCommandBuilder = ({ parts, onCopy }) => {
     const [inputValues, setInputValues] = useState({});
 

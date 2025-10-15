@@ -52,7 +52,6 @@ export default function HomePage() {
                     </p>
                 </header>
 
-                {/* --- БЛОК: КОМАНДА ДНЯ --- */}
                 <AnimatePresence>
                     {commandOfTheDay && (
                         <motion.div
@@ -154,35 +153,28 @@ export default function HomePage() {
 
                 <section className="space-y-4 mt-8">
                     <AnimatePresence>
-                        {commandsToShow.map(
-                            (
-                                item,
-                                index // <-- Рендерим commandsToShow вместо filteredCommands
-                            ) => (
-                                <motion.div
-                                    id={`command-${item.id}`}
-                                    key={item.id}
-                                    layout
-                                    initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                                    transition={{
-                                        duration: 0.3,
-                                        delay: index * 0.02,
-                                    }}
-                                >
-                                    {/* Передаем весь объект 'item' целиком, а также isFavorite и onToggleFavorite */}
-                                    <CommandCard
-                                        item={item}
-                                        isFavorite={favorites.includes(item.id)}
-                                        onToggleFavorite={handleToggleFavorite}
-                                    />
-                                </motion.div>
-                            )
-                        )}
+                        {commandsToShow.map((item, index) => (
+                            <motion.div
+                                id={`command-${item.id}`}
+                                key={item.id}
+                                layout
+                                initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                                transition={{
+                                    duration: 0.3,
+                                    delay: index * 0.02,
+                                }}
+                            >
+                                <CommandCard
+                                    item={item}
+                                    isFavorite={favorites.includes(item.id)}
+                                    onToggleFavorite={handleToggleFavorite}
+                                />
+                            </motion.div>
+                        ))}
                     </AnimatePresence>
 
-                    {/* Если не нашли команд, показываем сообщение */}
                     {filteredCommands.length === 0 && (
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -199,7 +191,6 @@ export default function HomePage() {
                     )}
                 </section>
 
-                {/* --- КНОПКИ "ПОКАЗАТЬ ЕЩЕ" / "СКРЫТЬ" --- */}
                 <AnimatePresence>
                     {(hasMore || limit > INITIAL_LIMIT) && (
                         <motion.div

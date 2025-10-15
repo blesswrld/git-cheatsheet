@@ -6,7 +6,7 @@ import {
     ChevronUpIcon,
     ClipboardIcon,
     CheckIcon,
-    StarIcon as StarIconOutline, // Пустая звезда
+    StarIcon as StarIconOutline,
 } from "@heroicons/react/24/outline";
 import { LinkIcon, StarIcon as StarIconSolid } from "@heroicons/react/24/solid"; // Заполненная звезда
 import { MergeViz } from "../visualizers/MergeViz";
@@ -14,16 +14,13 @@ import { RebaseViz } from "../visualizers/RebaseViz";
 import { CommitViz } from "../visualizers/CommitViz";
 import { InteractiveCommandBuilder } from "./InteractiveCommandBuilder";
 
-// Карта визуализаций
 const visualizationMap = {
     merge: <MergeViz />,
     rebase: <RebaseViz />,
     commit: <CommitViz />,
 };
 
-// Основной компонент карточки
 export default function CommandCard({ item, isFavorite, onToggleFavorite }) {
-    // Добавляем пропсы
     const {
         id,
         command,
@@ -93,7 +90,6 @@ export default function CommandCard({ item, isFavorite, onToggleFavorite }) {
                         className="flex-shrink-0 rounded-md p-2 hover:bg-slate-100 dark:hover:bg-white/10 focus:outline-none ring-sky-500 focus-visible:ring-2"
                     >
                         {isFavorite ? (
-                            // Кнопка "Избранное"
                             <StarIconSolid className="h-5 w-5 text-yellow-400" />
                         ) : (
                             <StarIconOutline className="h-5 w-5 text-slate-500 dark:text-slate-400" />

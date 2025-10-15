@@ -15,7 +15,6 @@ export const CommitViz = () => (
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
             </marker>
         </defs>
-        {/* Branch line */}
         <motion.path
             d="M 10 40 H 190"
             stroke="#94a3b8"
@@ -44,7 +43,6 @@ export const CommitViz = () => (
             transition={{ delay: 0.4 }}
         />
 
-        {/* New commit appearing */}
         <motion.circle
             cx="130"
             cy="40"

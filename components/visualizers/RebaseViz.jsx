@@ -15,7 +15,6 @@ export const RebaseViz = () => (
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
             </marker>
         </defs>
-        {/* Main branch */}
         <path
             d="M 10 20 H 190"
             stroke="#94a3b8"
@@ -25,7 +24,6 @@ export const RebaseViz = () => (
         <circle cx="30" cy="20" r="4" fill="#94a3b8" />
         <circle cx="70" cy="20" r="4" fill="#94a3b8" />
 
-        {/* Feature branch (initial) */}
         <motion.path
             d="M 70 20 C 100 20, 110 60, 140 60 H 10"
             stroke="#34d399"
@@ -43,7 +41,6 @@ export const RebaseViz = () => (
             animate={{ opacity: 0.3 }}
         />
 
-        {/* Rebase animation */}
         <motion.circle
             cx="115"
             cy="52"
